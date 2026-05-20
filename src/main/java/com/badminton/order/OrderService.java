@@ -64,9 +64,47 @@ public class OrderService {
     }
 
     // 更新單筆明細 (對應 V2 的 OrderItemDAO.updateItem)
+    // ★ 修正：更新時自動處理庫存差額（商品變更 / 數量變更）
     public void updateOrderItem(Integer itemId, Product product, Integer quantity, Integer unitPrice) {
         OrderItem item = orderItemRepository.findById(itemId).orElse(null);
         if (item != null) {
+            // ① 記錄舊的商品與數量
+            Product oldProduct = item.getProduct();
+            Integer oldQuantity = item.getQuantity();
+            Integer oldProductId = (oldProduct != null) ? oldProduct.getProductId() : null;
+            Integer newProductId = (product != null) ? product.getProductId() : null;
+
+            // ② 判斷商品是否有更換
+            boolean productChanged = (oldProductId != null && newProductId != null && !oldProductId.equals(newProductId));
+
+            if (productChanged) {
+                // 商品更換：舊商品回補全部數量，新商品扣除全部數量
+                Product oldProd = productRepo.findById(oldProductId).orElse(null);
+                if (oldProd != null) {
+                    oldProd.setStockQty(oldProd.getStockQty() + oldQuantity);
+                    productRepo.save(oldProd);
+                }
+                Product newProd = productRepo.findById(newProductId).orElseThrow(
+                        () -> new RuntimeException("找不到新商品"));
+                if (newProd.getStockQty() < quantity) {
+                    throw new RuntimeException("新商品庫存不足！剩餘：" + newProd.getStockQty());
+                }
+                newProd.setStockQty(newProd.getStockQty() - quantity);
+                productRepo.save(newProd);
+            } else if (!quantity.equals(oldQuantity) && oldProductId != null) {
+                // 同一商品，數量變更：只調整差額
+                int diff = quantity - oldQuantity; // 正數=多買, 負數=少買
+                Product prod = productRepo.findById(oldProductId).orElse(null);
+                if (prod != null) {
+                    if (diff > 0 && prod.getStockQty() < diff) {
+                        throw new RuntimeException("庫存不足！剩餘：" + prod.getStockQty() + "，需額外扣除：" + diff);
+                    }
+                    prod.setStockQty(prod.getStockQty() - diff); // diff 為負時等於回補
+                    productRepo.save(prod);
+                }
+            }
+
+            // ③ 更新明細欄位
             item.setProduct(product);
             item.setQuantity(quantity);
             item.setUnitPrice(unitPrice);
@@ -78,10 +116,21 @@ public class OrderService {
     }
 
     // 刪除單筆明細 (對應 V2 的 OrderItemDAO.deleteByItemId)
+    // ★ 修正：刪除明細時自動回補該筆商品的庫存
     public void deleteOrderItem(Integer itemId) {
         OrderItem item = orderItemRepository.findById(itemId).orElse(null);
         if (item != null) {
             Integer orderId = item.getOrderId();
+
+            // ★ 回補庫存：將被刪除的明細數量加回商品庫存
+            if (item.getProduct() != null) {
+                Product product = productRepo.findById(item.getProduct().getProductId()).orElse(null);
+                if (product != null) {
+                    product.setStockQty(product.getStockQty() + item.getQuantity());
+                    productRepo.save(product);
+                }
+            }
+
             orderItemRepository.deleteById(itemId);
             // 刪除明細後，重新計算訂單總金額
             recalcOrderTotal(orderId);
@@ -101,6 +150,45 @@ public class OrderService {
         }
     }
 
+    /**
+     * ★ 回補庫存：將訂單中所有明細的數量加回商品庫存
+     * 用於訂單取消或刪除時，確保商品庫存不會永久流失
+     */
+    private void restoreStock(Integer orderId) {
+        List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
+        for (OrderItem item : items) {
+            if (item.getProduct() != null) {
+                Product product = productRepo.findById(item.getProduct().getProductId()).orElse(null);
+                if (product != null) {
+                    product.setStockQty(product.getStockQty() + item.getQuantity());
+                    productRepo.save(product);
+                }
+            }
+        }
+    }
+
+    /**
+     * ★ 重新扣庫存：當訂單從「已取消」恢復為其他狀態時，重新扣除庫存
+     * 防止管理員誤操作取消→恢復導致庫存虛增
+     */
+    private void deductStock(Integer orderId) {
+        List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
+        for (OrderItem item : items) {
+            if (item.getProduct() != null) {
+                Product product = productRepo.findById(item.getProduct().getProductId()).orElse(null);
+                if (product != null) {
+                    if (product.getStockQty() < item.getQuantity()) {
+                        throw new RuntimeException(
+                            "無法恢復訂單：商品「" + product.getProductName() + "」庫存不足！" +
+                            "剩餘：" + product.getStockQty() + "，需要：" + item.getQuantity());
+                    }
+                    product.setStockQty(product.getStockQty() - item.getQuantity());
+                    productRepo.save(product);
+                }
+            }
+        }
+    }
+
     // 更新訂單 (對應原版 V2 的 OrderDAO.updateOrder 方法)
     // 更新 status, paymentType, note，並在狀態變更時自動記錄時間點
     public void updateOrder(Integer id, OrderStatus status, PaymentType paymentType, String note) {
@@ -117,6 +205,16 @@ public class OrderService {
                     case CANCELLED -> order.setCancelledAt(now);
                     default -> {}  // UNPAID 不需要額外時間（用 created_at）
                 }
+
+                // ★ 取消訂單時，自動回補庫存
+                if (status == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED) {
+                    restoreStock(id);
+                }
+
+                // ★ 從「已取消」恢復為其他狀態時，重新扣除庫存（防止庫存虛增）
+                if (oldStatus == OrderStatus.CANCELLED && status != OrderStatus.CANCELLED) {
+                    deductStock(id);
+                }
             }
 
             order.setStatus(status);
@@ -127,6 +225,14 @@ public class OrderService {
     }
 
     public void deleteOrder(Integer id) {
+        Order order = orderRepository.findById(id).orElse(null);
+        if (order == null) return;
+
+        // ★ 刪除非取消狀態的訂單時，自動回補庫存（已取消的訂單在取消時就已經回補過了）
+        if (order.getStatus() != OrderStatus.CANCELLED) {
+            restoreStock(id);
+        }
+
         // 在刪除訂單前，必須先刪除底下的明細，否則會發生資料庫 FK (Foreign Key) 衝突錯誤
         List<OrderItem> items = orderItemRepository.findByOrderId(id);
         orderItemRepository.deleteAll(items);
