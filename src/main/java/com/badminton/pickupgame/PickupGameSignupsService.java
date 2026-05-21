@@ -121,6 +121,7 @@ public class PickupGameSignupsService {
 		String memberName = signup.getMember() != null ? signup.getMember().getFullName() : "球友";
 		String memberEmail = signup.getMember() != null ? signup.getMember().getEmail() : null;
 		String hostName = game.getHost() != null ? game.getHost().getFullName() : "團主";
+		String hostPhone = game.getHost() != null ? game.getHost().getPhone() : null;
 		String gameInfo = game.getGameDate() + " " + game.getStartTime() + "-" + game.getEndTime();
 
 		// ② 刪除報名紀錄
@@ -131,7 +132,7 @@ public class PickupGameSignupsService {
 
 		// 🌟 ④ 寄送移除通知 Email（刪除成功後才寄，避免誤發）
 		if (memberEmail != null && !memberEmail.trim().isEmpty()) {
-			pickupGameEmailService.sendRemovalNotice(memberEmail, memberName, gameInfo, hostName);
+			pickupGameEmailService.sendRemovalNotice(memberEmail, memberName, gameInfo, hostName, hostPhone);
 		}
 	}
 
