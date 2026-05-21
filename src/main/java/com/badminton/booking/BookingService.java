@@ -154,6 +154,12 @@ public class BookingService {
 		if (updated.getNote() != null) {
 			booking.setNote(updated.getNote());
 		}
+		if (updated.getPaymentType() != null) {
+			booking.setPaymentType(updated.getPaymentType());
+		}
+		if (updated.getTotalAmount() != null) {
+			booking.setTotalAmount(updated.getTotalAmount());
+		}
 		
 		// 檢查時段衝突（排除自己這筆）
 		List<Booking> existingBookings = bookingRepo.findByCourtAndBookingDateAndStatusNot(
