@@ -219,8 +219,8 @@ public class AdminRestController {
     @PostMapping("/member")
     public ResponseEntity<?> addMemberByAdmin(@RequestBody Member member, HttpServletRequest request) {
         try {
-            if (member.getUsername() == null || !member.getUsername().matches("^[A-Za-z0-9]{6,12}$")) {
-                return ResponseEntity.badRequest().body("帳號必須為 6-12 碼英數字 (不可包含特殊字元)");
+            if (member.getUsername() == null || !member.getUsername().matches("^[A-Za-z0-9]{6,15}$")) {
+                return ResponseEntity.badRequest().body("帳號必須為 6-15 碼英數字 (不可包含特殊字元)");
             }
             if (member.getPassword() == null || member.getPassword().length() < 6 || member.getPassword().length() > 12) {
                 return ResponseEntity.badRequest().body("密碼必須為 6-12 個字元");

@@ -125,8 +125,8 @@ public class MemberRestController {
                 verificationCodeStore.remove(member.getEmail().trim());
             }
 
-            if (member.getUsername() == null || !member.getUsername().matches("^[A-Za-z0-9]{6,12}$")) {
-                return ResponseEntity.badRequest().body("帳號必須為 6-12 碼英數字 (不可包含特殊字元)");
+            if (member.getUsername() == null || !member.getUsername().matches("^[A-Za-z0-9]{6,15}$")) {
+                return ResponseEntity.badRequest().body("帳號必須為 6-15 碼英數字 (不可包含特殊字元)");
             }
             if (member.getPassword() == null || member.getPassword().length() < 6 || member.getPassword().length() > 12) {
                 return ResponseEntity.badRequest().body("密碼必須為 6-12 個字元");
@@ -309,7 +309,7 @@ public class MemberRestController {
 
         // 寄送驗證碼
         try {
-            emailService.sendVerificationCode(email.trim(), code);
+            emailService.sendRegisterVerificationCode(email.trim(), code);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("message", "驗證碼寄送失敗，請稍後再試"));
