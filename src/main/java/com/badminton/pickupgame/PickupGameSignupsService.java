@@ -19,6 +19,9 @@ public class PickupGameSignupsService {
 	@Autowired
 	private PickupGameEmailService pickupGameEmailService;
 
+	@Autowired
+	private com.badminton.booking.BookingRepository bookingRepo;
+
 	// ===== 查詢 =====
 
 	/** 查詢全部報名紀錄 */
@@ -79,11 +82,8 @@ public class PickupGameSignupsService {
 			PickupGameSignups saved = signupsRepo.save(existing);
 			syncGamePlayerCount(game);
 			return saved;
-		}
-	}
-	
 	// ====== ④ 衝堂檢查 (防分身術) ======
-	// 撈出此會員所有已加入的報名
+	// 4a. 檢查是否跟「已報名的其他揪團」時間衝突
 	List<PickupGameSignups> mySignups = signupsRepo.findByMember_MemberId(memberId);
 	for (PickupGameSignups s : mySignups) {
 		if (s.getStatus() == SignupStatus.JOINED) {
@@ -94,6 +94,19 @@ public class PickupGameSignupsService {
 				if (game.getStartTime().isBefore(existingGame.getEndTime()) && 
 					game.getEndTime().isAfter(existingGame.getStartTime())) {
 					throw new RuntimeException("您在同一時段已經報名了另一場揪團，無法重複參加！");
+				}
+			}
+		}
+	}
+	
+	// 4b. 檢查是否跟「自己的場地預約」時間衝突
+	List<com.badminton.booking.Booking> myBookings = bookingRepo.findByMember_MemberIdOrderByBookingDateDescStartTimeDesc(memberId);
+	for (com.badminton.booking.Booking b : myBookings) {
+		if (b.getStatus() == com.badminton.booking.BookingStatus.CONFIRMED || b.getStatus() == com.badminton.booking.BookingStatus.PENDING) {
+			if (b.getBookingDate().equals(game.getGameDate())) {
+				if (game.getStartTime().isBefore(b.getEndTime()) && 
+					game.getEndTime().isAfter(b.getStartTime())) {
+					throw new RuntimeException("您在同一時段已經有場地預約，無法報名揪團！");
 				}
 			}
 		}
