@@ -82,6 +82,9 @@ public class PickupGameSignupsService {
 			PickupGameSignups saved = signupsRepo.save(existing);
 			syncGamePlayerCount(game);
 			return saved;
+		}
+	}
+	
 	// ====== ④ 衝堂檢查 (防分身術) ======
 	// 4a. 檢查是否跟「已報名的其他揪團」時間衝突
 	List<PickupGameSignups> mySignups = signupsRepo.findByMember_MemberId(memberId);
@@ -106,7 +109,7 @@ public class PickupGameSignupsService {
 			if (b.getBookingDate().equals(game.getGameDate())) {
 				if (game.getStartTime().isBefore(b.getEndTime()) && 
 					game.getEndTime().isAfter(b.getStartTime())) {
-					throw new RuntimeException("您在同一時段已經有場地預約，無法報名揪團！");
+					throw new RuntimeException("因為您已經有場地預約訂單，系統已非同步交叉比對，為防範重複報名，無法報名此時段的揪團！");
 				}
 			}
 		}
