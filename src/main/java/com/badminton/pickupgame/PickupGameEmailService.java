@@ -28,7 +28,6 @@ public class PickupGameEmailService {
      * @param content    團主輸入的公告內容
      * @return 成功寄送的封數
      */
-    @Async
     public int sendBroadcast(List<String> recipients, String hostName,
                              String gameInfo, String content) {
         int successCount = 0;
@@ -68,17 +67,21 @@ public class PickupGameEmailService {
      */
     @Async
     public void sendRemovalNotice(String toEmail, String memberName,
-                                  String gameInfo, String hostName) {
+                                  String gameInfo, String hostName, String hostPhone) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom("ygtq.badminton@gmail.com");
             message.setTo(toEmail);
             message.setSubject("【羽過天晴】揪團參與狀態變更通知");
+            String contactInfo = hostName;
+            if (hostPhone != null && !hostPhone.trim().isEmpty()) {
+                contactInfo += "，電話：" + hostPhone;
+            }
             message.setText(
                 memberName + " 您好，\n\n" +
                 "很抱歉通知您，您報名的球局「" + gameInfo + "」" +
                 "由於名額調整或團主安排，已取消您的報名。\n\n" +
-                "如有預付費用，請聯繫團主（" + hostName + "）處理。\n" +
+                "如有預付費用，請聯繫團主（" + contactInfo + "）處理。\n" +
                 "造成不便敬請見諒。\n\n" +
                 "如有任何疑問，歡迎透過平台聯繫團主。\n\n" +
                 "— 羽過天晴羽球館"
@@ -97,19 +100,23 @@ public class PickupGameEmailService {
      * @param gameInfo   球局摘要（日期+時段）
      */
     @Async
-    public void sendCancellationNotice(List<String> recipients, String hostName, String gameInfo) {
+    public void sendCancellationNotice(List<String> recipients, String hostName, String hostPhone, String gameInfo) {
         for (String toEmail : recipients) {
             try {
                 SimpleMailMessage message = new SimpleMailMessage();
                 message.setFrom("ygtq.badminton@gmail.com");
                 message.setTo(toEmail);
                 message.setSubject("【羽過天晴】揪團取消通知");
+                String contactInfo = hostName;
+                if (hostPhone != null && !hostPhone.trim().isEmpty()) {
+                    contactInfo += "，電話：" + hostPhone;
+                }
                 message.setText(
                     "Hi，球友您好！\n\n" +
                     "很抱歉通知您，您報名的球局「" + gameInfo + "」" +
                     "由於團主安排，目前已經取消。\n\n" +
                     "造成不便敬請見諒。\n" +
-                    "如有預付費用，請聯繫團主（" + hostName + "）處理退費事宜。\n\n" +
+                    "如有預付費用，請聯繫團主（" + contactInfo + "）處理退費事宜。\n\n" +
                     "— 羽過天晴羽球館"
                 );
                 mailSender.send(message);

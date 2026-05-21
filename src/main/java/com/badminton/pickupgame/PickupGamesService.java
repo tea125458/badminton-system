@@ -76,8 +76,9 @@ public class PickupGamesService {
 		// 3. 批次寄送取消通知信
 		if (!emails.isEmpty()) {
 			String hostName = game.getHost() != null ? game.getHost().getFullName() : "團主";
+			String hostPhone = game.getHost() != null ? game.getHost().getPhone() : null;
 			String gameInfo = game.getGameDate() + " " + game.getStartTime() + "-" + game.getEndTime();
-			pickupGameEmailService.sendCancellationNotice(emails, hostName, gameInfo);
+			pickupGameEmailService.sendCancellationNotice(emails, hostName, hostPhone, gameInfo);
 		}
 
 		return savedGame;
