@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.badminton.config.AuthHolder;
 import com.badminton.config.JwtUtil;
+import com.badminton.member.Member;
+import com.badminton.member.MemberService;
 import com.badminton.pickupgame.PickupGameEmailService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,6 +38,9 @@ public class PickupGameRestController {
 
 	@Autowired
 	private JwtUtil jwtUtil;
+
+	@Autowired
+	private MemberService memberService;
 
 	// GET /api/pickup-games
 	@GetMapping
@@ -170,5 +175,83 @@ public class PickupGameRestController {
 
 		return ResponseEntity.ok(
 				Map.of("success", true, "sent", sent, "total", emails.size()));
+	}
+
+	// ============================
+	// 🌟 POST /api/pickup-games/{gameId}/contact-host
+	// 球友透過系統寄送 Email 聯絡主揪
+	// ============================
+	@PostMapping("/{gameId}/contact-host")
+	public ResponseEntity<Map<String, Object>> contactHost(
+			@PathVariable Integer gameId,
+			@RequestBody Map<String, String> body,
+			HttpServletRequest request) {
+		
+		String message = body.get("message");
+		if (message == null || message.trim().isEmpty()) {
+			return ResponseEntity.badRequest().body(Map.of("success", false, "error", "訊息內容不可為空"));
+		}
+
+		// 解析 JWT 取得寄件者身分
+		Integer userId = null;
+		String authHeader = request.getHeader("Authorization");
+		System.out.println("======== CONTACT HOST DEBUG ========");
+		System.out.println("authHeader: " + authHeader);
+		String jwtErrorMsg = null;
+		if (authHeader != null && authHeader.startsWith("Bearer ")) {
+			try {
+				Claims claims = jwtUtil.parseToken(authHeader.substring(7));
+				userId = claims.get("userId", Integer.class);
+				System.out.println("Parsed userId: " + userId);
+			} catch (Exception e) {
+				jwtErrorMsg = e.getMessage();
+				System.out.println("JWT Parse Exception: " + jwtErrorMsg);
+			}
+		} else {
+			System.out.println("authHeader is missing or invalid");
+		}
+
+		if (userId == null && AuthHolder.isLoggedIn()) {
+			userId = AuthHolder.getUserId();
+		}
+
+		if (userId == null) {
+			String errorReason = "未知錯誤";
+			if (authHeader == null) errorReason = "沒有提供 Token";
+			else if (authHeader.equals("Bearer null")) errorReason = "Token 為字串 null";
+			else if (!authHeader.startsWith("Bearer ")) errorReason = "Token 格式錯誤 (不是 Bearer)";
+			else errorReason = "JWT 錯誤: " + (jwtErrorMsg != null ? jwtErrorMsg : "未知解析失敗");
+			System.out.println("Contact Host Failed: " + errorReason);
+			return ResponseEntity.status(401).body(Map.of("success", false, "error", "請先登入系統 (" + errorReason + ")"));
+		}
+
+		// 取得揪團與主揪資訊
+		PickupGames game = pickupGamesService.findById(gameId);
+		if (game == null) {
+			return ResponseEntity.badRequest().body(Map.of("success", false, "error", "找不到該揪團"));
+		}
+		
+		if (game.getHost() == null || game.getHost().getEmail() == null || game.getHost().getEmail().isEmpty()) {
+			return ResponseEntity.badRequest().body(Map.of("success", false, "error", "該揪團主尚未提供信箱"));
+		}
+
+		// 從資料庫查詢寄件者的會員姓名
+		String memberName = "球友";
+		try {
+			java.util.Optional<Member> senderOpt = memberService.getMemberById(userId);
+			if (senderOpt.isPresent()) {
+				Member sender = senderOpt.get();
+				memberName = sender.getFullName() != null ? sender.getFullName() : "球友";
+			}
+		} catch (Exception e) {
+			System.err.println("查詢寄件者資料失敗: " + e.getMessage());
+		}
+
+		String hostName = game.getHost().getFullName();
+		String gameInfo = game.getGameDate() + " " + game.getStartTime() + "-" + game.getEndTime();
+
+		pickupGameEmailService.sendContactHostEmail(game.getHost().getEmail(), hostName, memberName, gameInfo, message.trim());
+
+		return ResponseEntity.ok(Map.of("success", true, "message", "信件已發送成功"));
 	}
 }

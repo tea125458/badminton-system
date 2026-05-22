@@ -122,7 +122,38 @@ public class PickupGameEmailService {
                 mailSender.send(message);
             } catch (Exception e) {
                 System.err.println("寄送取消通知失敗 → " + toEmail + "：" + e.getMessage());
-            }
+        }
+    }
+
+    /**
+     * 🌟 聯絡主揪：由球友透過系統發送信件給主揪
+     *
+     * @param hostEmail   主揪的 Email
+     * @param hostName    主揪姓名
+     * @param memberName  發信球友姓名
+     * @param gameInfo    球局摘要
+     * @param content     發信內容
+     */
+    @Async
+    public void sendContactHostEmail(String hostEmail, String hostName, String memberName, String gameInfo, String content) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("ygtq.badminton@gmail.com");
+            message.setTo(hostEmail);
+            message.setSubject("【羽過天晴】有球友向您詢問揪團資訊");
+            message.setText(
+                hostName + " 您好，\n\n" +
+                "球友「" + memberName + "」透過系統針對您的球局「" + gameInfo + "」向您發送了訊息：\n\n" +
+                "──────────────\n" +
+                content + "\n" +
+                "──────────────\n\n" +
+                "若要回覆，請登入羽過天晴系統，至「管理揪團」使用『寄出公告信』功能通知所有球友。\n" +
+                "為保護球友個資，系統不提供個人聯絡資訊。\n\n" +
+                "— 羽過天晴羽球館"
+            );
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("寄送聯絡主揪信件失敗 → " + hostEmail + "：" + e.getMessage());
         }
     }
 }
