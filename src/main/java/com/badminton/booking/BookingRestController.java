@@ -63,12 +63,16 @@ public class BookingRestController {
 			
 			if ("MANAGER".equals(jwtRole) || "STAFF".equals(jwtRole)) {
 				// 管理員：允許指定 memberId（後台幫會員建預約）
-				if (booking.getMember() == null || booking.getMember().getMemberId() == 0) {
-					return ResponseEntity.badRequest().body(Map.of("message", "請指定會員"));
+				if (booking.getMember() != null && booking.getMember().getMemberId() != 0) {
+					Member member = memberRepo.findById(booking.getMember().getMemberId())
+							.orElseThrow(() -> new RuntimeException("找不到指定的會員"));
+					booking.setMember(member);
+				} else {
+					// 管理員透過前台自己預約時，沒帶 member → 用自己的 JWT userId
+					Member member = memberRepo.findById(jwtUserId)
+							.orElseThrow(() -> new RuntimeException("找不到會員資料"));
+					booking.setMember(member);
 				}
-				Member member = memberRepo.findById(booking.getMember().getMemberId())
-						.orElseThrow(() -> new RuntimeException("找不到指定的會員"));
-				booking.setMember(member);
 			} else {
 				// 一般會員：強制使用 JWT 的 userId，防止冒用他人身份
 				Member member = memberRepo.findById(jwtUserId)
