@@ -3,6 +3,7 @@ package com.badminton.member;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -14,6 +15,7 @@ public class EmailService {
     /**
      * 寄送驗證碼到指定的 Email 信箱
      */
+    @Async
     public void sendVerificationCode(String toEmail, String code) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom("ygtq.badminton@gmail.com");
@@ -33,6 +35,7 @@ public class EmailService {
     /**
      * 寄送註冊驗證碼到指定的 Email 信箱
      */
+    @Async
     public void sendRegisterVerificationCode(String toEmail, String code) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom("ygtq.badminton@gmail.com");
@@ -52,6 +55,7 @@ public class EmailService {
     /**
      * 寄送註冊成功通知信
      */
+    @Async
     public void sendWelcomeEmail(String toEmail, String fullName) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom("ygtq.badminton@gmail.com");
