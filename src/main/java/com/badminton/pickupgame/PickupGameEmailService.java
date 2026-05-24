@@ -44,7 +44,7 @@ public class PickupGameEmailService {
                     content + "\n" +
                     "──────────────\n\n" +
                     "發佈者：" + hostName + "\n" +
-                    "如有任何問題，請直接聯繫團主。\n\n" +
+                    "基於隱私保護，如需聯繫主揪，請至平台點選「聯絡主揪」發送訊息。\n\n" +
                     "— 羽過天晴羽球館"
                 );
                 mailSender.send(message);
