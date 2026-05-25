@@ -113,7 +113,7 @@ public class PickupGameEmailService {
                 mailSender.send(message);
             } catch (Exception e) {
                 System.err.println("寄送取消通知失敗 → " + toEmail + "：" + e.getMessage());
-        }
+        }}
     }
 
     /**
