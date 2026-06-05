@@ -126,10 +126,16 @@ public class PickupGameRestController {
 		pickupGamesService.deleteById(id);
 	}
 	
-	// GET /api/pickup-games/3/signups → 查詢第 3 場揪團的所有報名
+	// 原本的回傳型態是 List<PickupGameSignups>，現在改成 List<PickupGameSignupResponseDTO>
 	@GetMapping("/{gameId}/signups")
-	public List<PickupGameSignups> findSignupsByGameId(@PathVariable Integer gameId){
-		return signupsService.findByGameId(gameId);
+	public List<PickupGameSignupResponseDTO> findSignupsByGameId(@PathVariable Integer gameId){
+		// 1. 從資料庫撈出原始的 Entity 列表
+		List<PickupGameSignups> signups = signupsService.findByGameId(gameId);
+		
+		// 2. 利用 Java Stream 將每一個 Entity 轉換為 DTO（轉換過程中就會自動完成脫敏）
+		return signups.stream()
+				.map(PickupGameSignupResponseDTO::new)
+				.collect(Collectors.toList());
 	}
 
 	// ============================
