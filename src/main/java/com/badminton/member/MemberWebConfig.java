@@ -15,7 +15,7 @@ public class MemberWebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(memberAuthInterceptor)
-                .addPathPatterns("/api/admins/**", "/api/members/**", "/api/bookings/**", "/api/orders/**") // 攔截需要 JWT 的 API
+                .addPathPatterns("/api/admins/**", "/api/members/**", "/api/bookings/**", "/api/orders/**", "/api/pickup-games/**", "/api/pickup-game-signups/**") // 攔截需要 JWT 的 API
                 .excludePathPatterns(
                     "/api/members/send-register-code",	
                     "/api/admins/login",

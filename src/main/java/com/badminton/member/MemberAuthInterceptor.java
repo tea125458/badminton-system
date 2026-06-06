@@ -47,8 +47,10 @@ public class MemberAuthInterceptor implements HandlerInterceptor {
             }
         }
 
-        // 3. 開放路徑（登入、註冊、登出不需要 Token）
-        if (uri.contains("/login") || uri.contains("/register") || uri.contains("/logout") || uri.contains("/reset-password") || uri.equals("/")) {
+        // 3. 開放路徑（登入、註冊、登出不需要 Token，以及 GET 的公開查詢）
+        if (uri.contains("/login") || uri.contains("/register") || uri.contains("/logout") || uri.contains("/reset-password") || uri.equals("/") ||
+            (uri.contains("/api/pickup-games") && "GET".equalsIgnoreCase(request.getMethod())) ||
+            (uri.contains("/api/pickup-game-signups") && "GET".equalsIgnoreCase(request.getMethod()))) {
             return true;
         }
 

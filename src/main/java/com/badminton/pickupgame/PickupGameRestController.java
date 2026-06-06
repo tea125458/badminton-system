@@ -19,7 +19,6 @@ import com.badminton.config.AuthHolder;
 import com.badminton.config.JwtUtil;
 import com.badminton.member.Member;
 import com.badminton.member.MemberService;
-import com.badminton.pickupgame.PickupGameEmailService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -137,9 +136,12 @@ public class PickupGameRestController {
 		// 1. 從資料庫撈出原始的 Entity 列表
 		List<PickupGameSignups> signups = signupsService.findByGameId(gameId);
 		
-		// 2. 利用 Java Stream 將每一個 Entity 轉換為 DTO（轉換過程中就會自動完成脫敏）
+		// 2. 取得當前登入使用者的 ID（沒登入就是 null）
+		Integer currentUserId = AuthHolder.getUserId();
+		
+		// 3. 利用 Java Stream 將每一個 Entity 轉換為 DTO
 		return signups.stream()
-				.map(PickupGameSignupResponseDTO::new)
+				.map(signup -> new PickupGameSignupResponseDTO(signup, currentUserId))
 				.collect(Collectors.toList());
 	}
 

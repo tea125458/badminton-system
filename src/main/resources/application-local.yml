@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    password: Badminton2026Pass
+  jpa:
+    hibernate:
+      ddl-auto: none
