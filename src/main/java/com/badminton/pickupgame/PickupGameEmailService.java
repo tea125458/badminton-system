@@ -147,4 +147,37 @@ public class PickupGameEmailService {
             System.err.println("寄送聯絡主揪信件失敗 → " + hostEmail + "：" + e.getMessage());
         }
     }
+
+    /**
+     * 🌟 報名成功通知：當球友成功報名揪團時寄送
+     *
+     * @param toEmail           球友的 Email
+     * @param memberName        球友的姓名
+     * @param gameInfo          球局摘要（日期+時段+場地）
+     * @param hostName          團主姓名
+     * @param googleCalendarUrl Google 行事曆的一鍵加入網址
+     */
+    @Async
+    public void sendSignupSuccessNotice(String toEmail, String memberName,
+                                        String gameInfo, String hostName, String googleCalendarUrl) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("ygtq.badminton@gmail.com");
+            message.setTo(toEmail);
+            message.setSubject("【羽過天晴】臨打報名成功通知");
+            message.setText(
+                memberName + " 您好，\n\n" +
+                "恭喜您已成功報名以下的羽球臨打局！\n\n" +
+                "🏸 揪團資訊：\n" + gameInfo + "\n" +
+                "👑 揪團團主：" + hostName + "\n\n" +
+                "別忘了把時間記下來，您可以點擊下方連結，一鍵將行程加入您的 Google 行事曆：\n" +
+                googleCalendarUrl + "\n\n" +
+                "祝您打球愉快！\n\n" +
+                "— 羽過天晴羽球館"
+            );
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("寄送報名成功通知失敗 → " + toEmail + "：" + e.getMessage());
+        }
+    }
 }

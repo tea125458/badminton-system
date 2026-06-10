@@ -21,9 +21,9 @@ public class PickupGamesService {
 
 	// ===== 查詢 =====
 
-	/** 查詢全部揪團（同時校正 currentPlayers，確保與報名紀錄一致） */
+	/** 查詢全部揪團（排除壓力測試資料，同時校正 currentPlayers，確保與報名紀錄一致） */
 	public List<PickupGames> findAll() {
-		List<PickupGames> games = pickupGameRepo.findAllByOrderByGameDateAscStartTimeAsc();
+		List<PickupGames> games = pickupGameRepo.findRealGames("海量資料壓力測試產生");
 		// 每一場揪團都即時校正人數
 		games.forEach(this::syncCurrentPlayers);
 		return games;

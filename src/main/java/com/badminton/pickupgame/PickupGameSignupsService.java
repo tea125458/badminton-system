@@ -81,6 +81,10 @@ public class PickupGameSignupsService {
 			existing.setStatus(SignupStatus.JOINED);
 			PickupGameSignups saved = signupsRepo.save(existing);
 			syncGamePlayerCount(game);
+			
+			// 🌟 寄送報名成功通知信與 Google Calendar 連結
+			sendSuccessEmailAsync(saved, game);
+			
 			return saved;
 		}
 	}
@@ -118,6 +122,9 @@ public class PickupGameSignupsService {
 	// ====== ⑤ 儲存全新報名 ======
 	PickupGameSignups saved = signupsRepo.save(signup);
 	syncGamePlayerCount(game);
+	
+	// 🌟 寄送報名成功通知信與 Google Calendar 連結
+	sendSuccessEmailAsync(saved, game);
 	
 	return saved;
 	}
@@ -191,6 +198,43 @@ public class PickupGameSignupsService {
 		}
 		
 		pickupGameRepo.save(game);
+	}
+
+	/**
+	 * 🌟 準備寄信需要的資料，並組合 Google Calendar URL
+	 */
+	private void sendSuccessEmailAsync(PickupGameSignups saved, PickupGames game) {
+		if (saved.getMember() == null) return;
+		String memberEmail = saved.getMember().getEmail();
+		if (memberEmail == null || memberEmail.trim().isEmpty()) return;
+
+		String memberName = saved.getMember().getFullName();
+		String hostName = game.getHost() != null ? game.getHost().getFullName() : "團主";
+		String courtName = game.getCourt() != null ? game.getCourt().getCourtName() : "未指定場地";
+		String gameInfo = game.getGameDate() + " " + game.getStartTime() + "-" + game.getEndTime() + " @ " + courtName;
+
+		try {
+			// 組合 Google Calendar URL
+			java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss");
+			java.time.LocalDateTime startDT = java.time.LocalDateTime.of(game.getGameDate(), game.getStartTime());
+			java.time.LocalDateTime endDT = java.time.LocalDateTime.of(game.getGameDate(), game.getEndTime());
+			String dates = startDT.format(formatter) + "/" + endDT.format(formatter);
+			
+			String title = java.net.URLEncoder.encode("🏸 羽球臨打：" + courtName, java.nio.charset.StandardCharsets.UTF_8.toString());
+			String details = java.net.URLEncoder.encode("主揪：" + hostName + "\n請準時出席喔！", java.nio.charset.StandardCharsets.UTF_8.toString());
+			String location = java.net.URLEncoder.encode("羽過天晴羽球館", java.nio.charset.StandardCharsets.UTF_8.toString());
+
+			String googleCalendarUrl = "https://calendar.google.com/calendar/render?action=TEMPLATE" +
+					"&text=" + title +
+					"&dates=" + dates +
+					"&details=" + details +
+					"&location=" + location +
+					"&ctz=Asia/Taipei";
+
+			pickupGameEmailService.sendSignupSuccessNotice(memberEmail, memberName, gameInfo, hostName, googleCalendarUrl);
+		} catch (Exception e) {
+			System.err.println("準備寄送報名成功信件時發生錯誤: " + e.getMessage());
+		}
 	}
 }
 
